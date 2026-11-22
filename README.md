@@ -10,6 +10,7 @@ It provides lightweight types and utilities for common Redux store patterns, esp
 
 - 🧱 Simple normalized slice state type
 - 🎯 Reusable selector function type
+- 🧮 Builder for memoized selectors that take parameters
 - 📦 Convenient payload object helpers
 - 🧬 Fully typed with TypeScript
 - ⚛️ Designed for Redux Toolkit workflows
@@ -41,7 +42,7 @@ npm install @reduxjs/toolkit
 ```typescript
 import {
   SliceState,
-  ItemSelector,
+  SelectorFn,
   aPayloadObject,
   payloadObjectCreator,
 } from 'korimsoft-slizz';
@@ -59,7 +60,7 @@ const initialState: TodosState = {
   allIds: [],
 };
 
-const selectTodoIds: ItemSelector<TodosState, string[]> = state => state.allIds;
+const selectTodoIds: SelectorFn<TodosState, string[]> = state => state.allIds;
 
 const payload = aPayloadObject<Todo>({
   id: 'todo-1',
@@ -110,12 +111,14 @@ This pattern is useful when storing entities by ID while preserving a list of kn
 
 ---
 
-### `ItemSelector<TState, TOut>`
+### `SelectorFn<TState, TOut>`
 
 A small type alias for strongly typed selector functions.
 
+> Before version 1.0.0 this type was called `ItemSelector`. To upgrade, rename `ItemSelector` to `SelectorFn` in your imports and types; nothing else changed.
+
 ```typescript
-import { ItemSelector } from 'korimsoft-slizz';
+import { SelectorFn } from 'korimsoft-slizz';
 
 type Product = {
   id: string;
@@ -130,12 +133,12 @@ type ProductsState = {
   };
 };
 
-const selectProductsState: ItemSelector<
+const selectProductsState: SelectorFn<
   ProductsState,
   ProductsState['products']
 > = state => state.products;
 
-const selectProductIds: ItemSelector<ProductsState, string[]> = state =>
+const selectProductIds: SelectorFn<ProductsState, string[]> = state =>
   state.products.allIds;
 ```
 
@@ -238,11 +241,76 @@ Output:
 
 ---
 
+### `aParametrizedSelectorBuilder<TState>()`
+
+Builds a memoized selector that takes parameters, such as "the titles of the books in a genre". Calling it with parameters returns a selector made with Redux Toolkit's `createSelector`; calling that selector with the state returns the result.
+
+```typescript
+import { aParametrizedSelectorBuilder, SelectorFn } from 'korimsoft-slizz';
+
+type Book = {
+  id: string;
+  title: string;
+  genre: string;
+};
+
+type LibraryState = {
+  books: Book[];
+};
+
+const selectBooks: SelectorFn<LibraryState, Book[]> = state => state.books;
+
+const selectTitlesInGenre = aParametrizedSelectorBuilder<LibraryState>()
+  .withSelectors(selectBooks)
+  .withResultFuncCreator((genre: string) => (books: Book[]) =>
+    books.filter(book => book.genre === genre).map(book => book.title),
+  )
+  .build();
+
+const titles = selectTitlesInGenre('sci-fi')(state);
+```
+
+- `withSelectors(...selectors)`: the input selectors. Their results are passed to the result function in the same order.
+- `withResultFuncCreator(creator)`: takes the parameters and returns the result function.
+- `withCacheConfig(config)` (optional): which selectors are kept for reuse.
+- `build()`: returns the function that takes the parameters.
+
+The state type must be given (`aParametrizedSelectorBuilder<LibraryState>()`); the input selectors and the built selector are checked against it.
+
+Each selector memoizes its result like any `createSelector` selector. Which selectors are kept for reuse depends on the cache config:
+
+| Cache config                    | Selectors kept                                                         |
+|---------------------------------|------------------------------------------------------------------------|
+| _none_                          | only the one for the most recent parameters                            |
+| `{ maxSize: 10 }`               | the ones for the 10 most recently used parameters                      |
+| `{ cacheKeyFn }`                | one per key returned by `cacheKeyFn`, for every key ever used           |
+| `{ cacheKeyFn, maxSize: 10 }`   | one per key, for the 10 most recently used keys                         |
+
+Without `cacheKeyFn`, parameters are compared by reference (`===`). Pass a `cacheKeyFn` when the parameters are objects created anew on each call:
+
+```typescript
+const selectTitlesByFilter = aParametrizedSelectorBuilder<LibraryState>()
+  .withSelectors(selectBooks)
+  .withResultFuncCreator((filter: { genre: string }) => (books: Book[]) =>
+    books.filter(book => book.genre === filter.genre).map(book => book.title),
+  )
+  .withCacheConfig({ cacheKeyFn: filter => filter.genre, maxSize: 20 })
+  .build();
+
+// Both calls return the same selector.
+selectTitlesByFilter({ genre: 'sci-fi' });
+selectTitlesByFilter({ genre: 'sci-fi' });
+```
+
+To create the selectors with something other than `createSelector`, pass it to the builder, for example `aParametrizedSelectorBuilder<LibraryState>(createDraftSafeSelector as SelectorCreator)`.
+
+---
+
 ## Redux Toolkit Example
 
 ```typescript
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { SliceState, ItemSelector, aPayloadObject } from 'korimsoft-slizz';
+import { SliceState, SelectorFn, aPayloadObject } from 'korimsoft-slizz';
 
 type Book = {
   id: string;
@@ -287,10 +355,10 @@ type RootState = {
   books: BooksState;
 };
 
-export const selectBookIds: ItemSelector<RootState, string[]> = state =>
+export const selectBookIds: SelectorFn<RootState, string[]> = state =>
   state.books.allIds;
 
-export const selectBooks: ItemSelector<RootState, Book[]> = state =>
+export const selectBooks: SelectorFn<RootState, Book[]> = state =>
   state.books.allIds.map(id => state.books.byId[id]);
 
 export const createBookPayload = (book: Book) => aPayloadObject(book);
@@ -416,7 +484,7 @@ The version in `package.json` on `main` is **not** updated: the git tags and npm
 Slizz is written in TypeScript and ships with type declarations.
 
 ```typescript
-import type { SliceState, ItemSelector, PayloadObject } from 'korimsoft-slizz';
+import type { SliceState, SelectorFn, PayloadObject } from 'korimsoft-slizz';
 ```
 
 ---
