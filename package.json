@@ -37,7 +37,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Korimsoft/slizz.git"
+    "url": "git+https://github.com/korimsoft-org/slizz.git"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.2.7",
@@ -54,5 +54,9 @@
     "webpack": "^5.93.0",
     "webpack-cli": "^5.1.4"
   },
-  "packageManager": "pnpm@12.22.0"
+  "packageManager": "pnpm@12.22.0",
+  "bugs": {
+    "url": "https://github.com/korimsoft-org/slizz/issues"
+  },
+  "homepage": "https://github.com/korimsoft-org/slizz#readme"
 }
