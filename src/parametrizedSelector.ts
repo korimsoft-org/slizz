@@ -1,53 +1,28 @@
 import {createSelector, lruMemoize} from '@reduxjs/toolkit';
 import {SelectorFn} from './selectorFn';
 
-/**
- * Any selector, whatever state it reads. A selector of any state is assignable to it,
- * because `never` is assignable to every state type.
- */
 type AnySelectorFn = SelectorFn<never, unknown>;
 
 type SelectorResult<TSelector> = TSelector extends (state: never) => infer R ? R : never;
 
-/**
- * A function that takes parameters and returns a selector for them.
- */
 export type SelectorFnCreator<TState, TParams extends unknown[], TResult> =
     (...params: TParams) => SelectorFn<TState, TResult>;
 
-/**
- * The results of the given input selectors, in the same order.
- */
 export type ResultsOf<TSelectors extends ReadonlyArray<AnySelectorFn>> = {
     [K in keyof TSelectors]: SelectorResult<TSelectors[K]>;
 };
 
-/**
- * Takes the parameters and returns the result function, which combines the results of the input selectors.
- */
 export type ResultFuncCreator<
     TSelectors extends ReadonlyArray<AnySelectorFn>,
     TParams extends unknown[],
     TResult,
 > = (...params: TParams) => (...results: ResultsOf<TSelectors>) => TResult;
 
-/**
- * Which selectors are kept for reuse.
- *
- * - Neither option: only the selector of the most recent parameters.
- * - `maxSize`: the selectors of the `maxSize` most recently used parameters.
- * - `cacheKeyFn`: one selector per key, for every key ever used, or for the `maxSize` most recently used keys.
- *
- * Without `cacheKeyFn`, parameters are compared by reference (`===`).
- */
 export type CacheConfig<TParams extends unknown[]> = {
     cacheKeyFn?: (...params: TParams) => string;
     maxSize?: number;
 };
 
-/**
- * Creates a memoized selector from input selectors and a result function, the way `createSelector` does.
- */
 export type SelectorCreator = (
     selectors: ReadonlyArray<AnySelectorFn>,
     resultFunc: (...results: never[]) => unknown,
@@ -73,15 +48,6 @@ export type FinalStep<TState, TParams extends unknown[], TResult> = {
     build(): SelectorFnCreator<TState, TParams, TResult>;
 };
 
-/**
- * Builds a selector that takes parameters: `selectItemsByCategory('books')(state)`.
- *
- * The state type must be given (`aParametrizedSelectorBuilder<RootState>()`), so that the input selectors
- * and the built selector are checked against it.
- *
- * @param selectorCreator creates each selector; Redux Toolkit's `createSelector` unless another is given,
- *   for example `createDraftSafeSelector`.
- */
 export function aParametrizedSelectorBuilder<TState>(
     selectorCreator: SelectorCreator = createSelector as SelectorCreator,
 ): WithSelectorsStep<TState> {

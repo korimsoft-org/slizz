@@ -16,14 +16,16 @@ const dune: Book = {id: 'book-dune', title: 'Dune', genre: 'sci-fi'};
 const solaris: Book = {id: 'book-solaris', title: 'Solaris', genre: 'sci-fi'};
 const emma: Book = {id: 'book-emma', title: 'Emma', genre: 'classic'};
 
-/**
- * A library with no books. Tests whose result depends on the name or the books pass them explicitly.
- */
 const givenALibraryState = (overrides: Partial<LibraryState> = {}): LibraryState => ({
     libraryName: 'Any Library',
     books: [],
     ...overrides,
 });
+
+enum LetterCase {
+    Upper = 'upper',
+    Lower = 'lower',
+}
 
 const selectLibraryName: SelectorFn<LibraryState, string> = state => state.libraryName;
 const selectBooks: SelectorFn<LibraryState, Book[]> = state => state.books;
@@ -43,21 +45,21 @@ describe('parametrizedSelectorBuilder', () => {
         });
         const givenResultFuncCreator: ResultFuncCreator<
             [SelectorFn<LibraryState, string>, SelectorFn<LibraryState, Book[]>],
-            [string, boolean],
+            [string, LetterCase],
             string
-        > = (genre, uppercase) => (libraryName, books) => {
+        > = (genre, letterCase) => (libraryName, books) => {
             const titles = titlesInGenre(genre)(books).join(', ');
-            return `${libraryName}: ${uppercase ? titles.toUpperCase() : titles}`;
+            return `${libraryName}: ${letterCase === LetterCase.Upper ? titles.toUpperCase() : titles}`;
         };
 
-        const selectGenreSummary: SelectorFnCreator<LibraryState, [string, boolean], string> =
+        const selectGenreSummary: SelectorFnCreator<LibraryState, [string, LetterCase], string> =
             aParametrizedSelectorBuilder<LibraryState>()
                 .withSelectors(selectLibraryName, selectBooks)
                 .withResultFuncCreator(givenResultFuncCreator)
                 .build();
 
-        expect(selectGenreSummary('sci-fi', false)(givenState)).toBe('Municipal Library of Prague: Dune, Solaris');
-        expect(selectGenreSummary('sci-fi', true)(givenState)).toBe('Municipal Library of Prague: DUNE, SOLARIS');
+        expect(selectGenreSummary('sci-fi', LetterCase.Lower)(givenState)).toBe('Municipal Library of Prague: Dune, Solaris');
+        expect(selectGenreSummary('sci-fi', LetterCase.Upper)(givenState)).toBe('Municipal Library of Prague: DUNE, SOLARIS');
     });
 
     it('Should memoize the result of a selector for states with the same input selector results', () => {
