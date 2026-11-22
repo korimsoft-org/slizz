@@ -22,6 +22,12 @@ It provides lightweight types and utilities for common Redux store patterns, esp
 npm install korimsoft-slizz
 ```
 
+or with pnpm:
+
+```bash
+pnpm add korimsoft-slizz@latest
+```
+
 Slizz is designed to be used together with Redux Toolkit:
 
 ```bash
@@ -362,25 +368,25 @@ const articlePayload = createArticlePayload({
 ## Package Scripts
 
 ```bash
-npm run build
+pnpm build
 ```
 
 Builds the package.
 
 ```bash
-npm test
+pnpm test
 ```
 
 Runs tests.
 
 ```bash
-npm run test:watch
+pnpm test:watch
 ```
 
 Runs tests in watch mode.
 
 ```bash
-npm run test:coverage
+pnpm test:coverage
 ```
 
 Runs tests with coverage.
