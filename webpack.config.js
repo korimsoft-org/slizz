@@ -14,6 +14,8 @@ module.exports = {
         clean: true,
         globalObject: 'this',
     },
+    // Dependencies are installed by the app that uses slizz: never bundle a copy of them.
+    externals: Object.keys(require('./package.json').dependencies),
     resolve: {
         extensions: ['.ts', '.tsx']
     },
