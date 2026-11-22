@@ -1,0 +1,45 @@
+name: Publish dry run
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ 26.x ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm (version from packageManager in package.json)
+        uses: pnpm/action-setup@v6
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --if-present build
+      - run: pnpm test
+
+      # npm's dry run refuses a version that is already on npm, and package.json on main holds
+      # an old one (the release sets the real version only in its own build). Use one that never exists.
+      - name: Set a throwaway version
+        run: npm pkg set version="0.0.0-dry-run.${{ github.run_id }}"
+
+      # The same steps as the real release (publish-npm.yml): pack the tarball, then publish that tarball with npm.
+      - name: Pack the tarball
+        run: pnpm pack --pack-destination package
+
+      # Runs the publish command without uploading anything or logging in to npm.
+      - name: Publish dry run
+        run: npm publish ./package/*.tgz --dry-run --tag dry-run
