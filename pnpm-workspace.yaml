@@ -1,0 +1,5 @@
+# pnpm refuses package versions younger than its minimum release age (1 day), also in CI
+# when installing from the lockfile. tyfun is our own library and is often released
+# together with slizz, so every tyfun version is exempt.
+minimumReleaseAgeExclude:
+  - korimsoft-tyfun
