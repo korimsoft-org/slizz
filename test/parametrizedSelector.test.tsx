@@ -12,13 +12,16 @@ type LibraryState = {
     books: Book[];
 };
 
+const dune: Book = {id: 'book-dune', title: 'Dune', genre: 'sci-fi'};
+const solaris: Book = {id: 'book-solaris', title: 'Solaris', genre: 'sci-fi'};
+const emma: Book = {id: 'book-emma', title: 'Emma', genre: 'classic'};
+
+/**
+ * A library with no books. Tests whose result depends on the name or the books pass them explicitly.
+ */
 const givenALibraryState = (overrides: Partial<LibraryState> = {}): LibraryState => ({
-    libraryName: 'Municipal Library of Prague',
-    books: [
-        {id: 'book-dune', title: 'Dune', genre: 'sci-fi'},
-        {id: 'book-solaris', title: 'Solaris', genre: 'sci-fi'},
-        {id: 'book-emma', title: 'Emma', genre: 'classic'},
-    ],
+    libraryName: 'Any Library',
+    books: [],
     ...overrides,
 });
 
@@ -34,7 +37,10 @@ const aSelectTitlesInGenre = () => aParametrizedSelectorBuilder<LibraryState>()
 
 describe('parametrizedSelectorBuilder', () => {
     it('Should build a selector that combines the input selectors with the parameters', () => {
-        const givenState = givenALibraryState();
+        const givenState = givenALibraryState({
+            libraryName: 'Municipal Library of Prague',
+            books: [dune, solaris, emma],
+        });
         const givenResultFuncCreator: ResultFuncCreator<
             [SelectorFn<LibraryState, string>, SelectorFn<LibraryState, Book[]>],
             [string, boolean],
@@ -54,8 +60,10 @@ describe('parametrizedSelectorBuilder', () => {
         expect(selectGenreSummary('sci-fi', true)(givenState)).toBe('Municipal Library of Prague: DUNE, SOLARIS');
     });
 
-    it('Should memoize the result of a selector for the same state', () => {
-        const givenState = givenALibraryState();
+    it('Should memoize the result of a selector for states with the same input selector results', () => {
+        const givenBooks = [dune, solaris];
+        const givenFirstState = givenALibraryState({libraryName: 'Municipal Library of Prague', books: givenBooks});
+        const givenSecondState = givenALibraryState({libraryName: 'City Library of Brno', books: givenBooks});
         const resultFunc = jest.fn(titlesInGenre('sci-fi'));
         const selectTitlesInGenre = aParametrizedSelectorBuilder<LibraryState>()
             .withSelectors(selectBooks)
@@ -63,14 +71,14 @@ describe('parametrizedSelectorBuilder', () => {
             .build();
 
         const selector = selectTitlesInGenre('sci-fi');
-        const firstResult = selector(givenState);
-        const secondResult = selector({...givenState, libraryName: 'City Library of Brno'});
+        const firstResult = selector(givenFirstState);
+        const secondResult = selector(givenSecondState);
 
         expect(secondResult).toBe(firstResult);
         expect(resultFunc).toHaveBeenCalledTimes(1);
     });
 
-    it('Should return the same selector for the same parameters', () => {
+    it('Should return the same selector for the same parameters used twice in a row with the default cache', () => {
         const selectTitlesInGenre = aSelectTitlesInGenre().build();
 
         expect(selectTitlesInGenre('sci-fi')).toBe(selectTitlesInGenre('sci-fi'));
@@ -113,7 +121,7 @@ describe('parametrizedSelectorBuilder', () => {
         selectTitlesInGenre({genre: 'classic'});
 
         expect(selectTitlesInGenre({genre: 'sci-fi'})).toBe(sciFiSelector);
-        expect(sciFiSelector(givenALibraryState())).toEqual(['Dune', 'Solaris']);
+        expect(sciFiSelector(givenALibraryState({books: [dune, emma]}))).toEqual(['Dune']);
     });
 
     it('Should drop the least recently used cache key when there are more than maxSize keys', () => {
@@ -149,7 +157,7 @@ describe('parametrizedSelectorBuilder', () => {
             .withResultFuncCreator(titlesInGenre)
             .build();
 
-        const titles = selectTitlesInGenre('classic')(givenALibraryState());
+        const titles = selectTitlesInGenre('classic')(givenALibraryState({books: [dune, emma]}));
 
         expect(titles).toEqual(['Emma']);
         expect(selectorCreator).toHaveBeenCalledTimes(1);
