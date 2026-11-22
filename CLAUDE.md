@@ -2,6 +2,8 @@
 
 TypeScript helpers for Redux Toolkit, published to npm as `korimsoft-slizz`. Package manager: pnpm. Tests: `pnpm test` (Jest). Build: `pnpm run build` (webpack).
 
+`korimsoft-tyfun` is exempt from pnpm's minimum release age (`pnpm-workspace.yaml`), so a tyfun version released minutes ago can be installed and released with slizz right away. Every other dependency still has to be at least a day old.
+
 ## Releasing
 
 Every pull request merged into `main` is released to npm automatically (`.github/workflows/publish-npm.yml`). Direct pushes to `main` are forbidden.
