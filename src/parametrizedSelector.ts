@@ -107,8 +107,6 @@ function createSelectorInstanceFactory<
     selectors: TSelectors,
     resultFuncCreator: ResultFuncCreator<TSelectors, TParams, TResult>,
 ): SelectorFnCreator<TState, TParams, TResult> {
-    // The selector creator is typed for any state and result; the types of the builder steps
-    // guarantee that the selectors read TState and that the result function returns TResult.
     return (...params: TParams) =>
         selectorCreator(
             selectors,
@@ -121,7 +119,6 @@ function createKeyedSelectorFactory<TState, TParams extends unknown[], TResult>(
     cacheKeyFn: (...params: TParams) => string,
     maxSize?: number,
 ): SelectorFnCreator<TState, TParams, TResult> {
-    // A Map keeps insertion order: re-inserting on every use keeps the least recently used key first.
     const cache = new Map<string, SelectorFn<TState, TResult>>();
 
     return (...params: TParams) => {
